@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
-import { NODE_CODE_MAP } from './nodes';
+import { MODEL_TYPES, getModelComponents, getComponentCode } from './nodes';
 
 const START_NODE_ID = 'start-node';
 
@@ -69,6 +69,7 @@ function getReachableSortedNodes(nodes, edges, startId) {
 
 function CodePanel() {
   const [code, setCode] = useState('');
+  const [modelType, setModelType] = useState(MODEL_TYPES.TRANSFORMER);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -78,30 +79,108 @@ function CodePanel() {
       const sortedNodes = getReachableSortedNodes(nodes, edges, START_NODE_ID);
 
       const codeLines = sortedNodes.map((n) => {
-        return NODE_CODE_MAP[n.data.label] || `# Unknown: ${n.data.label}`;
+        return getComponentCode(modelType, n.data.label);
       });
 
-      const codeString = 
+      // Generate model-specific code template
+      let codeTemplate = '';
+      switch (modelType) {
+        case MODEL_TYPES.TRANSFORMER:
+          codeTemplate = 
+`import torch.nn as nn
+from transformers import AutoTokenizer
+
+class TransformerModel(nn.Module):
+    def __init__(self, vocab_size, embed_dim, num_heads, hidden_dim):
+        super().__init__()
+${codeLines.map((line) => '        ' + line).join('\n')}
+
+    def forward(self, x):
+        # Implement transformer forward pass
+        pass
+`;
+          break;
+        case MODEL_TYPES.PERFORMER:
+          codeTemplate = 
+`import torch.nn as nn
+from performer_pytorch import PerformerAttention
+
+class PerformerModel(nn.Module):
+    def __init__(self, vocab_size, embed_dim, num_heads, hidden_dim):
+        super().__init__()
+${codeLines.map((line) => '        ' + line).join('\n')}
+
+    def forward(self, x):
+        # Implement performer forward pass
+        pass
+`;
+          break;
+        case MODEL_TYPES.BERT:
+          codeTemplate = 
+`from transformers import BertModel, BertConfig
+import torch.nn as nn
+
+class CustomBertModel(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+${codeLines.map((line) => '        ' + line).join('\n')}
+
+    def forward(self, input_ids, attention_mask=None, token_type_ids=None):
+        # Implement BERT forward pass
+        pass
+`;
+          break;
+        case MODEL_TYPES.GPT:
+          codeTemplate = 
+`import torch.nn as nn
+from transformers import GPT2Config
+
+class CustomGPTModel(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+${codeLines.map((line) => '        ' + line).join('\n')}
+
+    def forward(self, input_ids, attention_mask=None):
+        # Implement GPT forward pass
+        pass
+`;
+          break;
+        default:
+          codeTemplate = 
 `import torch.nn as nn
 
-class MyModel(nn.Module):
+class CustomModel(nn.Module):
     def __init__(self):
         super().__init__()
 ${codeLines.map((line) => '        ' + line).join('\n')}
 
     def forward(self, x):
-        # Implement forward pass
+        # Implement custom forward pass
         pass
 `;
+      }
 
-      setCode(codeString);
+      setCode(codeTemplate);
     }, 500); // Regenerate code every 500ms
 
     return () => clearInterval(interval);
-  }, []);
+  }, [modelType]);
 
   return (
     <aside className="code-panel">
+      <div className="model-type-selector">
+        <h3>Model Type</h3>
+        <select 
+          value={modelType} 
+          onChange={(e) => setModelType(e.target.value)}
+        >
+          {Object.values(MODEL_TYPES).map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+      </div>
       <h3>Generated Code</h3>
       <pre>{code}</pre>
     </aside>
