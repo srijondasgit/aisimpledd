@@ -3,6 +3,7 @@
 
 A visual, drag-and-drop tool to create and connect AI model components — like **Embedding**, **Attention**, **FFN**, and **LM Head** — and auto-generate PyTorch code for them.
 
+![AI UI Screenshot](aicanvas/public/screenshot.png)
 ---
 
 ## ✨ Features
